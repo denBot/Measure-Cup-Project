@@ -57,7 +57,7 @@ long timeout_duration = 0;
 int timeout_cap_threshold = 1000;
 
 /* Max weight variable and creation of CapacitorSensor objects */
-int max_supported_weight = 200000; // 800g (unit measure in grams)
+long max_supported_weight = 200000;
 CapacitiveSensor   button_cap = CapacitiveSensor(3,1);  
 CapacitiveSensor   weight_cap = CapacitiveSensor(4,2);
 
@@ -79,58 +79,6 @@ void setup()
 
 
 
-
-
-/* Utility functions */
-
-void printWeight(long weight_cap) 
-{
-  /*  Converts the cap  value to grams at 1 decimal place and print result. */
-  weight_grams = weight_cap / 250;
-  weight_grams = round(weight_grams*10)/10.0;
-  Serial.println(String(weight_grams) + " grams.");
-}
-
-void activeLEDAnimation() 
-{
-  /* TODO: Activate each LED individually for 500ms and turns all off after 1 second. */
-   digitalWrite(13, true); /* Red LED */
-   delay(500);
-   digitalWrite(12, true); /* Yellow LED */
-   delay(500);
-   digitalWrite(11, true); /* Green LED */
-   delay(1000);
-   /* Turn R, Y, G LEDs off after final delay */
-   digitalWrite(13, false);
-   digitalWrite(12, false);
-   digitalWrite(11, false);
-}
-
-void deactiveLEDAnimation()
-{
-  /* Flashes Red LED Twice when measuring cup has been set to inactive */
-  digitalWrite(13, true);
-  delay(500);
-  digitalWrite(13, false);
-  delay(200);
-  digitalWrite(13, true);
-  delay(500);
-  digitalWrite(13, false);
-}
-
-void flashLED(pin, ms) {
-    /* Flashes an LED at specified pin for N milliseconds. */
-    digitalWrite(pin, true);
-    delay(ms);
-    digitalWrite(pin, false);
-}
-
-
-
-
-
-
-
 /* Main loop function */
 
 void loop()                    
@@ -146,11 +94,11 @@ void loop()
 
 
     /* If weight sensor is inactive and the touch button sensor has been pressed, record the sensor touch duration. If */
-    if (not active && btn_cap >= 1000 && btn_hold_start = 0) {
+    if (not active && btn_cap >= 1000 && btn_hold_start == 0) {
       btn_hold_start = millis();
     
     } else if (not active && btn_cap >= 1000 && btn_hold_start > 0) {
-      btn_hold_duration = millis() - btn_hold_start();
+      btn_hold_duration = millis() - btn_hold_start;
     
     } else if (btn_cap >= 1000 && not active && btn_hold_duration > 2000) {
       /* If the weight prototype is inactive and button sensor is being touched for longer than 2 seconds: activate */
@@ -174,7 +122,7 @@ void loop()
     if (active) {
       
       
-      if (timeout_startTime = 0 and active and w_cap < timeout_cap_threshold) {
+      if (timeout_startTime == 0 and active and w_cap < timeout_cap_threshold) {
         timeout_startTime = millis();
       
       } else if (timeout_startTime > 0 and active and w_cap < timeout_cap_threshold) {
@@ -198,8 +146,8 @@ void loop()
         if (w_cap < max_supported_weight) {
           
           if (w_cap < 1000) {
-            /* if capacitor is less than 1000, do nothing. */
-            continue;
+            /* if capacitor is less than 1000, print empty line and do nothing. */
+            Serial.println("");
           }
   
           else if (w_cap >= 1000 && w_cap < 15000) {
@@ -235,7 +183,7 @@ void loop()
         } else {
           /* if capacitor is greater than 200000, rapidly flash RED LED every 200ms. */
           Serial.println("Warning: exceeding the maximum supported weight!");
-          flashLED(13, 200)
+          flashLED(13, 200);
         }
   
         /* print the weight and update each LED pin with boolean values */
@@ -246,8 +194,55 @@ void loop()
       }
             
     }
+    
+}
 
 
 
+
+
+
+/* Utility functions */
+
+void printWeight(long weight_cap) 
+{
+  /*  Converts the cap  value to grams at 1 decimal place and print result. */
+  float weight_grams = weight_cap / 250;
+  weight_grams = round(weight_grams*10)/10.0;
+  Serial.println(String(weight_grams) + " grams.");
+}
+
+void activeLEDAnimation() 
+{
+  /* TODO: Activate each LED individually for 500ms and turns all off after 1 second. */
+   digitalWrite(13, true); /* Red LED */
+   delay(500);
+   digitalWrite(12, true); /* Yellow LED */
+   delay(500);
+   digitalWrite(11, true); /* Green LED */
+   delay(1000);
+   /* Turn R, Y, G LEDs off after final delay */
+   digitalWrite(13, false);
+   digitalWrite(12, false);
+   digitalWrite(11, false);
+}
+
+void deactiveLEDAnimation()
+{
+  /* Flashes Red LED Twice when measuring cup has been set to inactive */
+  digitalWrite(13, true);
+  delay(500);
+  digitalWrite(13, false);
+  delay(200);
+  digitalWrite(13, true);
+  delay(500);
+  digitalWrite(13, false);
+}
+
+void flashLED(int pin, int ms) {
+    /* Flashes an LED at specified pin for N milliseconds. */
+    digitalWrite(pin, true);
+    delay(ms);
+    digitalWrite(pin, false);
 }
 
