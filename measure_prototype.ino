@@ -10,8 +10,8 @@
  * Remaining pins are used with LiquidCrystal to impliment a functioning LCD screen.
  */
 
-CapacitiveSensor weight_cap = CapacitiveSensor(8, 6);
-LiquidCrystal lcd(7,9,10,11,12,13);
+CapacitiveSensor weight_cap = CapacitiveSensor(7, 6);
+LiquidCrystal lcd(8,9,10,11,12,13);
 
 bool active = false;
 bool usingLCD = true;
@@ -80,7 +80,9 @@ void loop() {
         processTimeout();
       
       } else {
-        Serial.print("Weight Capacitor: "+String(w_cap));
+        
+        Serial.println("Weight Capacitor: "+String(w_cap));
+        
         if (w_cap < max_supported_weight) {
           if (w_cap < 1000) {
             /* do nothing */
@@ -98,7 +100,6 @@ void loop() {
             led_r_On = true;
           }
         } else {
-          Serial.println("Warning: exceeding the maximum supported weight!");
           flashLED(led_r_pin, 100);
         }
   
@@ -173,7 +174,15 @@ void printWeight(long weight_cap) {
   if (usingLCD) {
     lcd.clear();
     lcd.setCursor(0,1);
-    lcd.print(String(weight_grams) + " grams.");
+    if (weight_cap < max_supported_weight) {
+      lcd.print(String(weight_grams) + " grams.");
+    } else {
+      Serial.println("Warning: exceeding the maximum supported weight!");
+      lcd.setCursor(0,0);
+      lcd.print(String(weight_grams) + " grams.");
+      lcd.setCursor(0,1);
+      lcd.print("Exceeding max weight!");
+    }
   }
 }
 
