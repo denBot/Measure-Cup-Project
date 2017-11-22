@@ -10,7 +10,7 @@
  * Remaining pins are used with LiquidCrystal to impliment a functioning LCD screen.
  */
 
-CapacitiveSensor weight_cap = CapacitiveSensor(6,8);
+CapacitiveSensor weight_cap = CapacitiveSensor(8, 6);
 LiquidCrystal lcd(7,9,10,11,12,13);
 
 bool active = false;
@@ -26,21 +26,13 @@ int led_g_pin = 3;
 int led_b_pin = 2;
 int buttonPin = 1;
 
-long max_supported_weight = 200000;
+long max_supported_weight = 200000.00;
 long btn_hold_start = 0;
 long btn_hold_duration = 0;
 long btn_hold_aim_duration = 2000;
 long timeout_startTime = 0;
 long timeout_duration = 0;
 int timeout_cap_threshold = 1000;
-
-
-
-
-
-
-
-
 
 void setup() {
   
@@ -77,7 +69,6 @@ void loop() {
     led_b_On = false;
     checkButton();
 
-
     if (active) {
 
       led_b_On = true;
@@ -89,7 +80,7 @@ void loop() {
         processTimeout();
       
       } else {
-      
+        Serial.print("Weight Capacitor: "+String(w_cap));
         if (w_cap < max_supported_weight) {
           if (w_cap < 1000) {
             /* do nothing */
@@ -235,6 +226,7 @@ void activeLEDAnimation() {
    delay(200);
    digitalWrite(led_b_pin, true);
    delay(500);
+   
    digitalWrite(led_r_pin, false);
    digitalWrite(led_y_pin, false);
    digitalWrite(led_g_pin, false);
