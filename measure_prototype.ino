@@ -1,5 +1,5 @@
 #include <CapacitiveSensor.h>
-
+#include <LiquidCrystal.h>
 
 /* CS1Q HCI Measure Mug Prototype
  * Authored by 2086380A
@@ -37,90 +37,109 @@
 
 
 
+
+
+
 /* Variables */
 
 /*  Measure cup active status: false by default. */
 boolean active = false;
+boolean usingLCD = true;
+long max_supported_weight = 200000;
 
 /* Red, Yellow, Green LED Pin on/off booleans */
-int led_r_13_On = false;
-int led_y_12_On = false;
-int led_g_11_On = false;
-
-/* Variables for calculating touch sensor button hold time */
-long btn_hold_start = 0;
-long btn_hold_duration = 0;
+bool led_r_On = false;
+bool led_y_On = false;
+bool led_g_On = false;
+bool led_b_On = false;
+int led_r_pin = 5;
+int led_y_pin = 4;
+int led_g_pin = 3;
+int led_b_pin = 2;
+int buttonPin = 1;
 
 /* Variables for calculating weight/capacitor timeout duration */
+long btn_hold_start = 0;
+long btn_hold_duration = 0;
+long btn_hold_aim_duration = 2000;
 long timeout_startTime = 0;
 long timeout_duration = 0;
 int timeout_cap_threshold = 1000;
 
-/* Max weight variable and creation of CapacitorSensor objects */
-long max_supported_weight = 200000;
-CapacitiveSensor   button_cap = CapacitiveSensor(3,1);  
-CapacitiveSensor   weight_cap = CapacitiveSensor(4,2);
+CapacitiveSensor weight_cap = CapacitiveSensor(6,8);
+LiquidCrystal lcd(7,9,10,11,12,13);
 
 
 
 
-/* Initilisation */
+
 void setup()                    
 {
-  /* Opens serial port, configure pins 13, 12 and 11 for output. */
+  /* Opens serial port, configure pins 3, 4, 5 and 6 for RYGB LEDs, configures button. */
+  
    Serial.begin(9600);
-   pinMode(13, OUTPUT);
-   pinMode(12, OUTPUT);
-   pinMode(11, OUTPUT);
+   pinMode(buttonPin, INPUT_PULLUP);  
+   pinMode(led_r_pin, OUTPUT);
+   pinMode(led_y_pin, OUTPUT);
+   pinMode(led_g_pin, OUTPUT);
+   pinMode(led_b_pin, OUTPUT);
    Serial.println("Measure Cup Prototype - Initialised.");
+
+   
+   if (usingLCD) {
+     lcd.clear();
+     lcd.begin(16,2);
+     lcd.setCursor(0,0);
+     lcd.print("Measure Cup");
+     lcd.setCursor(0,1);
+     lcd.print("Prototype");
+   }
+   
+   turnOnAnimation();
 }
 
 
 
 
 
-/* Main loop function */
 
 void loop()                    
 {
-     
-    long btn_cap =  button_cap.capacitiveSensor(30);
     long w_cap = weight_cap.capacitiveSensor(30);
 
-    led_r_13_On = false;
-    led_y_12_On = false;
-    led_g_11_On = false;
-
-
+    led_r_On = false;
+    led_y_On = false;
+    led_g_On = false;
+    led_b_On = false;
 
     /* If weight sensor is inactive and the touch button sensor has been pressed, record the sensor touch duration. If */
-    if (not active && btn_cap >= 1000 && btn_hold_start == 0) {
-      btn_hold_start = millis();
-    
-    } else if (not active && btn_cap >= 1000 && btn_hold_start > 0) {
-      btn_hold_duration = millis() - btn_hold_start;
-    
-    } else if (btn_cap >= 1000 && not active && btn_hold_duration > 2000) {
-      /* If the weight prototype is inactive and button sensor is being touched for longer than 2 seconds: activate */
-      Serial.println("Starting weight measurer...");
-      active = true;
-      btn_hold_start = 0;
-      btn_hold_duration = 0;
-      activeLEDAnimation();
-    
+    if (not active && digitalRead(buttonPin) == LOW) {
+      
+      if (btn_hold_start == 0) {
+        btn_hold_start = millis();
+        Serial.println("Button Pressed! Starting hold count at: "+String(btn_hold_start));
+      
+      } else if (btn_hold_duration < btn_hold_aim_duration) {
+        btn_hold_duration = millis() - btn_hold_start;
+        Serial.println(btn_hold_duration);
+      
+      } else {
+        Serial.println("Starting weight measurer...");
+        active = true;
+        btn_hold_start = 0;
+        btn_hold_duration = 0;
+        activeLEDAnimation();
+      }
+      
     } else {
-      /* if btn_cap is less than 1000/isnt being pressed, reset the button press duration timer */
       btn_hold_start = 0;
       btn_hold_duration = 0;
     }
 
 
-    
-        
-
-
     if (active) {
-      
+
+      led_b_On = true;
       
       if (timeout_startTime == 0 and active and w_cap < timeout_cap_threshold) {
         timeout_startTime = millis();
@@ -136,65 +155,41 @@ void loop()
 
       /* If w_cap has been < 1000 for over 15 seconds, deactivate the measuring system. */
       if (timeout_duration > 15000) {
-        active = false;
-        timeout_startTime = 0;
-        timeout_duration = 0;
-        deactiveLEDAnimation();
-      
+        processTimeout();
       } else {
       
         if (w_cap < max_supported_weight) {
-          
           if (w_cap < 1000) {
-            /* if capacitor is less than 1000, print empty line and do nothing. */
-            Serial.println("");
+            /* do nothing */
+          } else if (w_cap >= 1000 && w_cap < 15000) {
+            flashLED(led_g_pin, 500);
+          } else if (w_cap >= 15000 && w_cap < 40000) {
+            led_g_On = true;
+          } else if (w_cap >= 40000 && w_cap < 80000) {
+            flashLED(led_y_pin, 500);
+          } else if (w_cap >= 80000 && w_cap < 100000) {
+            led_y_On = true;
+          } else if (w_cap >= 100000 && w_cap < 150000) {
+            flashLED(led_r_pin, 500);
+          } else {
+            led_r_On = true;
           }
-  
-          else if (w_cap >= 1000 && w_cap < 15000) {
-            /* if capacitor is between 1000 and 15000, flash GREEN LED every 500ms. */
-            flashLED(11, 500);
-          }
-          
-          else if (w_cap >= 15000 && w_cap < 40000) {
-            /* if capacitor is between 15000 and 40000, turn GREEN LED on. */
-            led_g_11_On = true;
-          } 
-  
-          else if (w_cap >= 40000 && w_cap < 80000) {
-            /* if capacitor is between 40000 and 80000, flash YELLOW LED every 500ms. */
-            flashLED(12, 500);
-          }
-          
-          else if (w_cap >= 80000 && w_cap < 100000) {
-            /* if capacitor is between 80000 and 100000, turn YELLOW LED on. */
-            led_y_12_On = true;
-          }
-  
-          else if (w_cap >= 100000 && w_cap < 150000) {
-            /* if capacitor is between 100000 and 150000, flash RED LED every 500ms. */
-            flashLED(13, 500);
-          }
-          
-          else {
-            /* if capacitor is between 150000 and 200000, turn RED LED on. */
-            led_r_13_On = true;
-          }
-        
         } else {
-          /* if capacitor is greater than 200000, rapidly flash RED LED every 200ms. */
           Serial.println("Warning: exceeding the maximum supported weight!");
-          flashLED(13, 200);
+          flashLED(led_r_pin, 100);
         }
   
         /* print the weight and update each LED pin with boolean values */
         printWeight(w_cap);
-        digitalWrite(13, led_r_13_On);
-        digitalWrite(12, led_y_12_On);
-        digitalWrite(11, led_g_11_On);
+        digitalWrite(led_r_pin, led_r_On);
+        digitalWrite(led_y_pin, led_y_On);
+        digitalWrite(led_g_pin, led_g_On);
+        digitalWrite(led_b_pin, led_b_On);
       }
             
+    } else {
+      disableLEDs();
     }
-    
 }
 
 
@@ -210,33 +205,77 @@ void printWeight(long weight_cap)
   float weight_grams = weight_cap / 250;
   weight_grams = round(weight_grams*10)/10.0;
   Serial.println(String(weight_grams) + " grams.");
+
+  if (usingLCD)
+  {
+    lcd.clear();
+    lcd.setCursor(0,1);
+    lcd.print(String(weight_grams) + " grams.");
+  }
+  
 }
+
+void disableLEDs()
+{
+  digitalWrite(led_r_pin, false);
+  digitalWrite(led_y_pin, false);
+  digitalWrite(led_g_pin, false);
+  digitalWrite(led_b_pin, false);
+}
+
+void processTimeout()
+{
+  Serial.print("Timeout occurred, deactivating");
+  active = false;
+  timeout_startTime = 0;
+  timeout_duration = 0;
+  flashLED(led_b_pin, 300);
+  flashLED(led_b_pin, 300);
+
+  if (usingLCD)
+  {
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Timeout due to:");
+    lcd.setCursor(0,1);
+    lcd.print("Scale Inacvitiy.");
+    delay(3000);
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Hold button for");
+    lcd.setCursor(0,1);
+    lcd.print("3s to start!");
+  }
+}
+
+void turnOnAnimation()
+{
+  flashLED(led_r_pin, 100);
+  flashLED(led_y_pin, 100);
+  flashLED(led_g_pin, 100);
+  flashLED(led_b_pin, 200);
+  flashLED(led_g_pin, 100);
+  flashLED(led_y_pin, 100);
+  flashLED(led_r_pin, 200);
+}
+
 
 void activeLEDAnimation() 
 {
   /* TODO: Activate each LED individually for 500ms and turns all off after 1 second. */
-   digitalWrite(13, true); /* Red LED */
+   digitalWrite(led_r_pin, true); /* Red LED */
+   delay(200);
+   digitalWrite(led_y_pin, true); /* Yellow LED */
+   delay(200);
+   digitalWrite(led_g_pin, true); /* Green LED */
+   delay(200);
+   digitalWrite(led_b_pin, true); /* Yellow LED */
    delay(500);
-   digitalWrite(12, true); /* Yellow LED */
-   delay(500);
-   digitalWrite(11, true); /* Green LED */
-   delay(1000);
    /* Turn R, Y, G LEDs off after final delay */
-   digitalWrite(13, false);
-   digitalWrite(12, false);
-   digitalWrite(11, false);
-}
-
-void deactiveLEDAnimation()
-{
-  /* Flashes Red LED Twice when measuring cup has been set to inactive */
-  digitalWrite(13, true);
-  delay(500);
-  digitalWrite(13, false);
-  delay(200);
-  digitalWrite(13, true);
-  delay(500);
-  digitalWrite(13, false);
+   digitalWrite(led_r_pin, false);
+   digitalWrite(led_y_pin, false);
+   digitalWrite(led_g_pin, false);
+   digitalWrite(led_b_pin, false);
 }
 
 void flashLED(int pin, int ms) {
