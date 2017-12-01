@@ -26,13 +26,13 @@ int led_g_pin = 3;
 int led_b_pin = 2;
 int buttonPin = 1;
 
-long max_supported_weight = 200000.00;
+long max_supported_weight = 2000.00;
 long btn_hold_start = 0;
 long btn_hold_duration = 0;
 long btn_hold_aim_duration = 2000;
 long timeout_startTime = 0;
 long timeout_duration = 0;
-int timeout_cap_threshold = 1000;
+int timeout_cap_threshold = 50;
 
 void setup() {
   
@@ -84,17 +84,17 @@ void loop() {
         Serial.println("Weight Capacitor: "+String(w_cap));
         
         if (w_cap < max_supported_weight) {
-          if (w_cap < 1000) {
+          if (w_cap < 50) {
             /* do nothing */
-          } else if (w_cap >= 1000 && w_cap < 15000) {
+          } else if (w_cap >= 50 && w_cap < 200) {
             flashLED(led_g_pin, 500);
-          } else if (w_cap >= 15000 && w_cap < 40000) {
+          } else if (w_cap >= 200 && w_cap < 400) {
             led_g_On = true;
-          } else if (w_cap >= 40000 && w_cap < 80000) {
+          } else if (w_cap >= 400 && w_cap < 600) {
             flashLED(led_y_pin, 500);
-          } else if (w_cap >= 80000 && w_cap < 100000) {
+          } else if (w_cap >= 600 && w_cap < 800) {
             led_y_On = true;
-          } else if (w_cap >= 100000 && w_cap < 150000) {
+          } else if (w_cap >= 800 && w_cap < 1000) {
             flashLED(led_r_pin, 500);
           } else {
             led_r_On = true;
@@ -135,7 +135,6 @@ void checkButton() {
     
     } else if (btn_hold_duration < btn_hold_aim_duration) {
       btn_hold_duration = millis() - btn_hold_start;
-      Serial.println(btn_hold_duration);
     
     } else {
       Serial.println("Starting weight measurer...");
@@ -167,7 +166,7 @@ void checkTimeout(long w_cap) {
 
 void printWeight(long weight_cap) {
   /*  Converts the cap  value to grams at 1 decimal place and print result. */
-  float weight_grams = weight_cap / 250;
+  float weight_grams = weight_cap / 50;
   weight_grams = round(weight_grams*10)/10.0;
   Serial.println(String(weight_grams) + " grams.");
 
